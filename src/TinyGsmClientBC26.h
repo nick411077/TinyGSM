@@ -1,30 +1,35 @@
 /**
- * @file       TinyGsmClientBG96.h
+ * @file       TinyGsmClientBC26.h
  * @author     Volodymyr Shymanskyy
  * @license    LGPL-3.0
  * @copyright  Copyright (c) 2016 Volodymyr Shymanskyy
- * @date       Apr 2018
+ * @date       Nov 2016
  */
 
-#ifndef SRC_TINYGSMCLIENTBG96_H_
-#define SRC_TINYGSMCLIENTBG96_H_
-// #pragma message("TinyGSM:  TinyGsmClientBG96")
+#ifndef SRC_TINYGSMCLIENTBC26_H_
+#define SRC_TINYGSMCLIENTBC26_H_
+// #pragma message("TinyGSM:  TinyGsmClientBC26")
 
 // #define TINY_GSM_DEBUG Serial
+// #define TINY_GSM_USE_HEX
 
-#define TINY_GSM_MUX_COUNT 12
+#ifdef __AVR__
+#define TINY_GSM_RX_BUFFER 32
+#else
+#define TINY_GSM_RX_BUFFER 192
+#endif
+
+#if !defined(TINY_GSM_YIELD_MS)
+#define TINY_GSM_YIELD_MS 0
+#endif
+
+#define TINY_GSM_MUX_COUNT 4
 #define TINY_GSM_BUFFER_READ_AND_CHECK_SIZE
 
-#include "TinyGsmBattery.tpp"
-#include "TinyGsmCalling.tpp"
 #include "TinyGsmGPRS.tpp"
-#include "TinyGsmGPS.tpp"
 #include "TinyGsmModem.tpp"
-#include "TinyGsmSMS.tpp"
 #include "TinyGsmTCP.tpp"
-#include "TinyGsmTemperature.tpp"
 #include "TinyGsmTime.tpp"
-#include "TinyGsmNTP.tpp"
 
 #define GSM_NL "\r\n"
 static const char GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
@@ -35,51 +40,38 @@ static const char GSM_CMS_ERROR[] TINY_GSM_PROGMEM = GSM_NL "+CMS ERROR:";
 #endif
 
 enum RegStatus {
-  REG_NO_RESULT    = -1,
-  REG_UNREGISTERED = 0,
-  REG_SEARCHING    = 2,
-  REG_DENIED       = 3,
-  REG_OK_HOME      = 1,
-  REG_OK_ROAMING   = 5,
-  REG_UNKNOWN      = 4,
+    REG_NO_RESULT    = -1,
+    REG_UNREGISTERED = 0,
+    REG_SEARCHING    = 2,
+    REG_DENIED       = 3,
+    REG_OK_HOME      = 1,
+    REG_OK_ROAMING   = 5,
+    REG_UNKNOWN      = 4,
 };
-
-class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
-                    public TinyGsmGPRS<TinyGsmBG96>,
-                    public TinyGsmTCP<TinyGsmBG96, TINY_GSM_MUX_COUNT>,
-                    public TinyGsmCalling<TinyGsmBG96>,
-                    public TinyGsmSMS<TinyGsmBG96>,
-                    public TinyGsmTime<TinyGsmBG96>,
-                    public TinyGsmNTP<TinyGsmBG96>,
-                    public TinyGsmGPS<TinyGsmBG96>,
-                    public TinyGsmBattery<TinyGsmBG96>,
-                    public TinyGsmTemperature<TinyGsmBG96> {
-  friend class TinyGsmModem<TinyGsmBG96>;
-  friend class TinyGsmGPRS<TinyGsmBG96>;
-  friend class TinyGsmTCP<TinyGsmBG96, TINY_GSM_MUX_COUNT>;
-  friend class TinyGsmCalling<TinyGsmBG96>;
-  friend class TinyGsmSMS<TinyGsmBG96>;
-  friend class TinyGsmTime<TinyGsmBG96>;
-  friend class TinyGsmNTP<TinyGsmBG96>;
-  friend class TinyGsmGPS<TinyGsmBG96>;
-  friend class TinyGsmBattery<TinyGsmBG96>;
-  friend class TinyGsmTemperature<TinyGsmBG96>;
+class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
+                    public TinyGsmGPRS<TinyGsmBC26>,
+                    public TinyGsmTCP<TinyGsmBC26, TINY_GSM_MUX_COUNT>,
+                    public TinyGsmTime<TinyGsmBC26> {
+  friend class TinyGsmModem<TinyGsmBC26>;
+  friend class TinyGsmGPRS<TinyGsmBC26>;
+  friend class TinyGsmTCP<TinyGsmBC26, TINY_GSM_MUX_COUNT>;
+  friend class TinyGsmTime<TinyGsmBC26>;
 
   /*
    * Inner Client
    */
  public:
-  class GsmClientBG96 : public GsmClient {
-    friend class TinyGsmBG96;
+  class GsmClientBC26 : public GsmClient {
+    friend class TinyGsmBC26;
 
    public:
-    GsmClientBG96() {}
+    GsmClientBC26() {}
 
-    explicit GsmClientBG96(TinyGsmBG96& modem, uint8_t mux = 0) {
-      init(&modem, mux);
+    explicit GsmClientBC26(TinyGsmBC26& modem, uint8_t mux = 0) {
+        init(&modem, mux);
     }
 
-    bool init(TinyGsmBG96* modem, uint8_t mux = 0) {
+    bool init(TinyGsmBC26* modem, uint8_t mux = 0) {
       this->at       = modem;
       sock_available = 0;
       prev_check     = 0;
@@ -128,34 +120,12 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
    * Inner Secure Client
    */
 
-  /*
-  class GsmClientSecureBG96 : public GsmClientBG96
-  {
-  public:
-    GsmClientSecure() {}
-
-    GsmClientSecure(TinyGsmBG96& modem, uint8_t mux = 0)
-     : public GsmClient(modem, mux)
-    {}
-
-
-  public:
-    int connect(const char* host, uint16_t port, int timeout_s) override {
-      stop();
-      TINY_GSM_YIELD();
-      rx.clear();
-      sock_connected = at->modemConnect(host, port, mux, true, timeout_s);
-      return sock_connected;
-    }
-    TINY_GSM_CLIENT_CONNECT_OVERRIDES
-  };
-  */
 
   /*
    * Constructor
    */
  public:
-  explicit TinyGsmBG96(Stream& stream) : stream(stream) {
+  explicit TinyGsmBC26(Stream& stream) : stream(stream) {
     memset(sockets, 0, sizeof(sockets));
   }
 
@@ -165,10 +135,9 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
  protected:
   bool initImpl(const char* pin = NULL) {
     DBG(GF("### TinyGSM Version:"), TINYGSM_VERSION);
-    DBG(GF("### TinyGSM Compiled Module:  TinyGsmClientBG96"));
+    DBG(GF("### TinyGSM Compiled Module:  TinyGsmClientBC26"));
 
     if (!testAT()) { return false; }
-
     sendAT(GF("E0"));  // Echo Off
     if (waitResponse() != 1) { return false; }
 
@@ -180,13 +149,15 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
     waitResponse();
 
     DBG(GF("### Modem:"), getModemName());
-
-    // Disable time and time zone URC's
+     // Disable time and time zone URC's
     sendAT(GF("+CTZR=0"));
     if (waitResponse(10000L) != 1) { return false; }
 
     // Enable automatic time zone update
     sendAT(GF("+CTZU=1"));
+    if (waitResponse(10000L) != 1) { return false; }
+
+    sendAT(GF("+QRST=1"));
     if (waitResponse(10000L) != 1) { return false; }
 
     SimStatus ret = getSimStatus();
@@ -261,30 +232,28 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
    */
  protected:
   bool gprsConnectImpl(const char* apn, const char* user = NULL,
-                       const char* pwd = NULL) {
+  const char* pwd = NULL) {
     gprsDisconnect();
 
     // Configure the TCPIP Context
-    sendAT(GF("+QICSGP=1,1,\""), apn, GF("\",\""), user, GF("\",\""), pwd,
-           GF("\""));
+    sendAT(GF("+QGACT=1,1,\""), apn, GF("\",\""), user, GF("\",\""), pwd,
+    GF("\""));
     if (waitResponse() != 1) { return false; }
 
     sendAT(GF("+QBAND=1,8"));
     if (waitResponse() != 1) { return false; }
 
-    // Activate GPRS/CSD Context
-    sendAT(GF("+QIACT=1"));
-    if (waitResponse(150000L) != 1) { return false; }
-
     // Attach to Packet Domain service - is this necessary?
     sendAT(GF("+CGATT=1"));
+    if (waitResponse(60000L) != 1) { return false; }
+    sendAT();
     if (waitResponse(60000L) != 1) { return false; }
 
     return true;
   }
 
   bool gprsDisconnectImpl() {
-    sendAT(GF("+QIDEACT=1"));  // Deactivate the bearer context
+    sendAT(GF("+QGACT=0,1"));  // Deactivate the bearer context
     if (waitResponse(40000L) != 1) { return false; }
 
     return true;
@@ -306,9 +275,7 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
   /*
    * Phone Call functions
    */
- protected:
-  // Can follow all of the phone call functions from the template
-
+ public:
   /*
    * Messaging functions
    */
@@ -319,219 +286,32 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
    * GSM Location functions
    */
  protected:
-  // NOTE:  As of application firmware version 01.016.01.016 triangulated
-  // locations can be obtained via the QuecLocator service and accompanying AT
-  // commands.  As this is a separate paid service which I do not have access
-  // to, I am not implementing it here.
-
   /*
    * GPS/GNSS/GLONASS location functions
    */
  protected:
-  // enable GPS
-  bool enableGPSImpl() {
-    sendAT(GF("+QGPS=1"));
-    if (waitResponse() != 1) { return false; }
-    return true;
-  }
-
-  bool disableGPSImpl() {
-    sendAT(GF("+QGPSEND"));
-    if (waitResponse() != 1) { return false; }
-    return true;
-  }
-
-  // get the RAW GPS output
-  String getGPSrawImpl() {
-    sendAT(GF("+QGPSLOC=2"));
-    if (waitResponse(10000L, GF(GSM_NL "+QGPSLOC:")) != 1) { return ""; }
-    String res = stream.readStringUntil('\n');
-    waitResponse();
-    res.trim();
-    return res;
-  }
-
-  // get GPS informations
-  bool getGPSImpl(float* lat, float* lon, float* speed = 0, float* alt = 0,
-                  int* vsat = 0, int* usat = 0, float* accuracy = 0,
-                  int* year = 0, int* month = 0, int* day = 0, int* hour = 0,
-                  int* minute = 0, int* second = 0) {
-    sendAT(GF("+QGPSLOC=2"));
-    if (waitResponse(10000L, GF(GSM_NL "+QGPSLOC:")) != 1) {
-      // NOTE:  Will return an error if the position isn't fixed
-      return false;
-    }
-
-    // init variables
-    float ilat         = 0;
-    float ilon         = 0;
-    float ispeed       = 0;
-    float ialt         = 0;
-    int   iusat        = 0;
-    float iaccuracy    = 0;
-    int   iyear        = 0;
-    int   imonth       = 0;
-    int   iday         = 0;
-    int   ihour        = 0;
-    int   imin         = 0;
-    float secondWithSS = 0;
-
-    // UTC date & Time
-    ihour        = streamGetIntLength(2);      // Two digit hour
-    imin         = streamGetIntLength(2);      // Two digit minute
-    secondWithSS = streamGetFloatBefore(',');  // 6 digit second with subseconds
-
-    ilat      = streamGetFloatBefore(',');  // Latitude
-    ilon      = streamGetFloatBefore(',');  // Longitude
-    iaccuracy = streamGetFloatBefore(',');  // Horizontal precision
-    ialt      = streamGetFloatBefore(',');  // Altitude from sea level
-    streamSkipUntil(',');                   // GNSS positioning mode
-    streamSkipUntil(',');  // Course Over Ground based on true north
-    streamSkipUntil(',');  // Speed Over Ground in Km/h
-    ispeed = streamGetFloatBefore(',');  // Speed Over Ground in knots
-
-    iday   = streamGetIntLength(2);    // Two digit day
-    imonth = streamGetIntLength(2);    // Two digit month
-    iyear  = streamGetIntBefore(',');  // Two digit year
-
-    iusat = streamGetIntBefore(',');  // Number of satellites,
-    streamSkipUntil('\n');  // The error code of the operation. If it is not
-                            // 0, it is the type of error.
-
-    // Set pointers
-    if (lat != NULL) *lat = ilat;
-    if (lon != NULL) *lon = ilon;
-    if (speed != NULL) *speed = ispeed;
-    if (alt != NULL) *alt = ialt;
-    if (vsat != NULL) *vsat = 0;
-    if (usat != NULL) *usat = iusat;
-    if (accuracy != NULL) *accuracy = iaccuracy;
-    if (iyear < 2000) iyear += 2000;
-    if (year != NULL) *year = iyear;
-    if (month != NULL) *month = imonth;
-    if (day != NULL) *day = iday;
-    if (hour != NULL) *hour = ihour;
-    if (minute != NULL) *minute = imin;
-    if (second != NULL) *second = static_cast<int>(secondWithSS);
-
-    waitResponse();  // Final OK
-    return true;
-  }
+  // No functions of this type supported
 
   /*
    * Time functions
    */
- protected:
-  String getGSMDateTimeImpl(TinyGSMDateTimeFormat format) {
-    sendAT(GF("+QLTS=2"));
-    if (waitResponse(2000L, GF("+QLTS: \"")) != 1) { return ""; }
-
-    String res;
-
-    switch (format) {
-      case DATE_FULL: res = stream.readStringUntil('"'); break;
-      case DATE_TIME:
-        streamSkipUntil(',');
-        res = stream.readStringUntil('"');
-        break;
-      case DATE_DATE: res = stream.readStringUntil(','); break;
-    }
-    waitResponse();  // Ends with OK
-    return res;
-  }
-
-  // The BG96 returns UTC time instead of local time as other modules do in
-  // response to CCLK, so we're using QLTS where we can specifically request
-  // local time.
-  bool getNetworkTimeImpl(int* year, int* month, int* day, int* hour,
-                          int* minute, int* second, float* timezone) {
-    sendAT(GF("+QLTS=2"));
-    if (waitResponse(2000L, GF("+QLTS: \"")) != 1) { return false; }
-
-    int iyear     = 0;
-    int imonth    = 0;
-    int iday      = 0;
-    int ihour     = 0;
-    int imin      = 0;
-    int isec      = 0;
-    int itimezone = 0;
-
-    // Date & Time
-    iyear       = streamGetIntBefore('/');
-    imonth      = streamGetIntBefore('/');
-    iday        = streamGetIntBefore(',');
-    ihour       = streamGetIntBefore(':');
-    imin        = streamGetIntBefore(':');
-    isec        = streamGetIntLength(2);
-    char tzSign = stream.read();
-    itimezone   = streamGetIntBefore(',');
-    if (tzSign == '-') { itimezone = itimezone * -1; }
-    streamSkipUntil('\n');  // DST flag
-
-    // Set pointers
-    if (iyear < 2000) iyear += 2000;
-    if (year != NULL) *year = iyear;
-    if (month != NULL) *month = imonth;
-    if (day != NULL) *day = iday;
-    if (hour != NULL) *hour = ihour;
-    if (minute != NULL) *minute = imin;
-    if (second != NULL) *second = isec;
-    if (timezone != NULL) *timezone = static_cast<float>(itimezone) / 4.0;
-
-    // Final OK
-    waitResponse();  // Ends with OK
-    return true;
-  }
+  // Can follow CCLK as per template
 
   /*
    * NTP server functions
    */
-
-  byte NTPServerSyncImpl(String server = "pool.ntp.org", byte = -5) {
-    // Request network synchronization
-    // AT+QNTP=<contextID>,<server>[,<port>][,<autosettime>]
-    sendAT(GF("+QNTP=1,\""), server, '"');
-    if (waitResponse(10000L, GF("+QNTP:"))) {
-      String result = stream.readStringUntil(',');
-      streamSkipUntil('\n');
-      result.trim();
-      if (TinyGsmIsValidNumber(result)) { return result.toInt(); }
-    } else {
-      return -1;
-    }
-    return -1;
-  }
-
-  String ShowNTPErrorImpl(byte error) TINY_GSM_ATTR_NOT_IMPLEMENTED;
+  // Can sync with server using CNTP as per template
 
   /*
    * Battery functions
    */
  protected:
-  // Can follow CBC as in the template
-
-  /*
-   * Temperature functions
-   */
- protected:
-  // get temperature in degree celsius
-  uint16_t getTemperatureImpl() {
-    sendAT(GF("+QTEMP"));
-    if (waitResponse(GF(GSM_NL "+QTEMP:")) != 1) { return 0; }
-    // return temperature in C
-    uint16_t res =
-        streamGetIntBefore(',');  // read PMIC (primary ic) temperature
-    streamSkipUntil(',');         // skip XO temperature ??
-    streamSkipUntil('\n');        // skip PA temperature ??
-    // Wait for final OK
-    waitResponse();
-    return res;
-  }
+  // Follows all battery functions per template
 
   /*
    * Client related functions
    */
- protected:
+  protected:
   bool modemConnect(const char* host, uint16_t port, uint8_t mux,
                     bool ssl = false, int timeout_s = 150) {
     if (ssl) { DBG("SSL not yet supported on this module!"); }
@@ -608,6 +388,7 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
     // 0 Initial, 1 Opening, 2 Connected, 3 Listening, 4 Closing
     return 2 == res;
   }
+
 
   /*
    * Utilities
@@ -723,8 +504,8 @@ class TinyGsmBG96 : public TinyGsmModem<TinyGsmBG96>,
   Stream& stream;
 
  protected:
-  GsmClientBG96* sockets[TINY_GSM_MUX_COUNT];
+  GsmClientBC26* sockets[TINY_GSM_MUX_COUNT];
   const char*    gsmNL = GSM_NL;
 };
 
-#endif  // SRC_TINYGSMCLIENTBG96_H_
+#endif  // SRC_TINYGSMCLIENTBC26_H_
