@@ -86,8 +86,8 @@ SoftwareSerial SerialAT(8, 9);  // RX, TX
 #define GSM_PIN ""
 
 // Your GPRS credentials, if any
-const char apn[]      = "internet.iot";
-const char gprsUser[] = "";
+const char apn[]      = "apn";
+const char gprsUser[] = "internet.iot";
 const char gprsPass[] = "";
 
 // Your WiFi connection credentials, if applicable
@@ -97,9 +97,7 @@ const char wifiPass[] = "YourWiFiPass";
 // MQTT details
 const char* broker = "mqtt.cgptiot.com.tw";
 
-const char* topicLed       = "GsmClientTest/led";
 const char* topicInit      = "GsmClientTest/init";
-const char* topicLedStatus = "GsmClientTest/ledStatus";
 
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
@@ -134,20 +132,6 @@ int ledStatus = LOW;
 
 uint32_t lastReconnectAttempt = 0;
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
-  SerialMon.print("Message arrived [");
-  SerialMon.print(topic);
-  SerialMon.print("]: ");
-  SerialMon.write(payload, len);
-  SerialMon.println();
-
-  // Only proceed if incoming message's topic matches
-  if (String(topic) == topicLed) {
-    ledStatus = !ledStatus;
-    digitalWrite(LED_PIN, ledStatus);
-    mqtt.publish(topicLedStatus, ledStatus ? "1" : "0");
-  }
-}
 
 boolean mqttConnect() {
   SerialMon.print("Connecting to ");
@@ -157,7 +141,7 @@ boolean mqttConnect() {
   //boolean status = mqtt.connect("GsmClientTest");
 
   // Or, if you want to authenticate MQTT:
-  boolean status = mqtt.connect("GsmClientName", "mqtt", "mqtt");
+  boolean status = mqtt.connect("bc26test", "mqtt", "mqtt");
 
   if (status == false) {
     SerialMon.println(" fail");
@@ -165,7 +149,6 @@ boolean mqttConnect() {
   }
   SerialMon.println(" success");
   mqtt.publish(topicInit, "GsmClientTest started");
-  mqtt.subscribe(topicLed);
   return mqtt.connected();
 }
 
@@ -245,7 +228,6 @@ void setup() {
 
   // MQTT Broker setup
   mqtt.setServer(broker, 1883);
-  mqtt.setCallback(mqttCallback);
 }
 
 void loop() {

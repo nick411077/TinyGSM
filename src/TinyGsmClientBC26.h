@@ -10,14 +10,9 @@
 #define SRC_TINYGSMCLIENTBC26_H_
 // #pragma message("TinyGSM:  TinyGsmClientBC26")
 
-// #define TINY_GSM_DEBUG Serial
-// #define TINY_GSM_USE_HEX
+#define TINY_GSM_DEBUG Serial
+#define TINY_GSM_USE_HEX
 
-#ifdef __AVR__
-#define TINY_GSM_RX_BUFFER 32
-#else
-#define TINY_GSM_RX_BUFFER 192
-#endif
 
 #if !defined(TINY_GSM_YIELD_MS)
 #define TINY_GSM_YIELD_MS 0
@@ -157,9 +152,6 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
     sendAT(GF("+CTZU=1"));
     if (waitResponse(10000L) != 1) { return false; }
 
-    sendAT(GF("+QRST=1"));
-    if (waitResponse(10000L) != 1) { return false; }
-
     SimStatus ret = getSimStatus();
     // if the sim isn't ready and a pin has been provided, try to unlock the sim
     if (ret != SIM_READY && pin != NULL && strlen(pin) > 0) {
@@ -236,7 +228,7 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
     gprsDisconnect();
 
     // Configure the TCPIP Context
-    sendAT(GF("+QGACT=1,1,\""), apn, GF("\",\""), user, GF("\",\""), pwd,
+    sendAT(GF("+QGACT=1,1,\""), apn, GF("\",\""), user,
     GF("\""));
     if (waitResponse() != 1) { return false; }
 
@@ -333,10 +325,14 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
   }
 
   int16_t modemSend(const void* buff, size_t len, uint8_t mux) {
+    char* outputString;
     sendAT(GF("+QISEND="), mux, ',', (uint16_t)len);
     if (waitResponse(GF(">")) != 1) { return 0; }
     stream.write(reinterpret_cast<const uint8_t*>(buff), len);
     stream.flush();
+    memcpy(outputString, buff, len);
+    outputString[len] = '\0';
+    Serial.println(outputString);
     if (waitResponse(GF(GSM_NL "SEND OK")) != 1) { return 0; }
     // TODO(?): Wait for ACK? AT+QISEND=id,0
     return len;
@@ -345,29 +341,26 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
   size_t modemRead(size_t size, uint8_t mux) {
     if (!sockets[mux]) return 0;
     sendAT(GF("+QIRD="), mux, ',', (uint16_t)size);
-    if (waitResponse(GF("+QIRD:")) != 1) { return 0; }
-    int16_t len = streamGetIntBefore('\n');
+    if (waitResponse(GF("+QIRD:")) != 1) 
+    { 
+      sockets[mux]->sock_available = 0;
+      return 0; 
+    }
+    streamSkipUntil(',');  // skip IP address
 
-    for (int i = 0; i < len; i++) { moveCharFromStreamToFifo(mux); }
+    int16_t len = streamGetIntBefore('\n');
+    if (len < size) { sockets[mux]->sock_available = len; }
+    for (int i = 0; i < len; i++) { 
+      moveCharFromStreamToFifo(mux);
+      sockets[mux]->sock_available--;
+    }
     waitResponse();
-    // DBG("### READ:", len, "from", mux);
-    sockets[mux]->sock_available = modemGetAvailable(mux);
+    DBG("### READ:", len, "from", mux);
     return len;
   }
 
-  size_t modemGetAvailable(uint8_t mux) {
-    if (!sockets[mux]) return 0;
-    sendAT(GF("+QIRD="), mux, GF(",0"));
-    size_t result = 0;
-    if (waitResponse(GF("+QIRD:")) == 1) {
-      streamSkipUntil(',');  // Skip total received
-      streamSkipUntil(',');  // Skip have read
-      result = streamGetIntBefore('\n');
-      if (result) { DBG("### DATA AVAILABLE:", result, "on", mux); }
-      waitResponse();
-    }
-    if (!result) { sockets[mux]->sock_connected = modemGetConnected(mux); }
-    return result;
+  size_t modemGetAvailable(uint8_t) {
+    return 0;
   }
 
   bool modemGetConnected(uint8_t mux) {
@@ -449,7 +442,7 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
             int8_t mux = streamGetIntBefore('\n');
             DBG("### URC RECV:", mux);
             if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && sockets[mux]) {
-              sockets[mux]->got_data = true;
+              sockets[mux]->sock_available = 512;
             }
           } else if (urc == "closed") {
             int8_t mux = streamGetIntBefore('\n');
