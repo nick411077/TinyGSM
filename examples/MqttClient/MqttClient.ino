@@ -116,7 +116,7 @@ const char* topicInit      = "GsmClientTest/init";
 #define TINY_GSM_USE_WIFI false
 #endif
 
-#define DUMP_AT_COMMANDS
+// #define DUMP_AT_COMMANDS
 #ifdef DUMP_AT_COMMANDS
 #include <StreamDebugger.h>
 StreamDebugger debugger(SerialAT, SerialMon);
@@ -270,6 +270,7 @@ void loop() {
     delay(100);
     return;
   }
-
+  mqtt.publish("nick","test");
+  delay(1000);
   mqtt.loop();
 }

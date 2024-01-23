@@ -10,7 +10,7 @@
 #define SRC_TINYGSMCLIENTBC26_H_
 // #pragma message("TinyGSM:  TinyGsmClientBC26")
 
-#define TINY_GSM_DEBUG Serial
+// #define TINY_GSM_DEBUG Serial
 #define TINY_GSM_USE_HEX
 
 
@@ -201,16 +201,7 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
    */
  public:
   RegStatus getRegistrationStatus() {
-    // Check first for EPS registration
-    RegStatus epsStatus = (RegStatus)getRegistrationStatusXREG("CEREG");
-
-    // If we're connected on EPS, great!
-    if (epsStatus == REG_OK_HOME || epsStatus == REG_OK_ROAMING) {
-      return epsStatus;
-    } else {
-      // Otherwise, check generic network status
-      return (RegStatus)getRegistrationStatusXREG("CREG");
-    }
+    return (RegStatus)getRegistrationStatusXREG("CEREG");
   }
 
  protected:
@@ -231,7 +222,10 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
     sendAT(GF("+QGACT=1,1,\""), apn, GF("\",\""), user,
     GF("\""));
     if (waitResponse() != 1) { return false; }
-
+    sendAT(GF("+QICFG=\"showlength\",0"));
+    if (waitResponse() != 1) { return false; }
+    sendAT(GF("+QICFG=\"viewmode\",0"));
+    if (waitResponse() != 1) { return false; }
     sendAT(GF("+QBAND=1,8"));
     if (waitResponse() != 1) { return false; }
 
@@ -346,7 +340,6 @@ class TinyGsmBC26 : public TinyGsmModem<TinyGsmBC26>,
       sockets[mux]->sock_available = 0;
       return 0; 
     }
-    streamSkipUntil(',');  // skip IP address
 
     int16_t len = streamGetIntBefore('\n');
     if (len < size) { sockets[mux]->sock_available = len; }

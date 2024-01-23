@@ -19,7 +19,7 @@
  **************************************************************/
 
 // Select your modem:
-#define TINY_GSM_MODEM_SIM800
+// #define TINY_GSM_MODEM_SIM800
 // #define TINY_GSM_MODEM_SIM808
 // #define TINY_GSM_MODEM_SIM868
 // #define TINY_GSM_MODEM_SIM900
@@ -32,6 +32,7 @@
 // #define TINY_GSM_MODEM_SARAR4
 // #define TINY_GSM_MODEM_M95
 // #define TINY_GSM_MODEM_BG96
+#define TINY_GSM_MODEM_BC26
 // #define TINY_GSM_MODEM_A6
 // #define TINY_GSM_MODEM_A7
 // #define TINY_GSM_MODEM_M590
@@ -46,13 +47,14 @@
 
 // Set serial for AT commands (to the module)
 // Use Hardware Serial on Mega, Leonardo, Micro
+#define __AVR_ATmega328P__ false
 #ifndef __AVR_ATmega328P__
 #define SerialAT Serial1
 
 // or Software Serial on Uno, Nano
 #else
 #include <SoftwareSerial.h>
-SoftwareSerial SerialAT(2, 3);  // RX, TX
+SoftwareSerial SerialAT(8, 9);  // RX, TX
 #endif
 
 // Increase RX buffer to capture the entire response
@@ -74,7 +76,7 @@ SoftwareSerial SerialAT(2, 3);  // RX, TX
 // NOTE:  DO NOT AUTOBAUD in production code.  Once you've established
 // communication, set a fixed baud rate using modem.setBaud(#).
 #define GSM_AUTOBAUD_MIN 9600
-#define GSM_AUTOBAUD_MAX 115200
+#define GSM_AUTOBAUD_MAX 9600
 
 // Add a reception delay, if needed.
 // This may be needed for a fast processor at a slow baud rate.
@@ -89,8 +91,8 @@ SoftwareSerial SerialAT(2, 3);  // RX, TX
 #define GSM_PIN ""
 
 // Your GPRS credentials, if any
-const char apn[]      = "YourAPN";
-const char gprsUser[] = "";
+const char apn[]      = "apn";
+const char gprsUser[] = "internet.iot";
 const char gprsPass[] = "";
 
 // Your WiFi connection credentials, if applicable
